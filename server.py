@@ -1,6 +1,18 @@
 #-*- coding:utf-8 -*-
 import sys, os
 from http.server import BaseHTTPRequestHandler,HTTPServer
+import subprocess
+
+class case_cgi_file(object):
+    '''脚本文件处理'''
+
+    def test(self, handler):
+        return os.path.isfile(handler.full_path) and \
+               handler.full_path.endswith('.py')
+
+    def act(self, handler):
+        ##运行脚本文件
+        handler.run_cgi(handler.full_path)
 
 class ServerException(Exception):
     '''服务器内部错误'''
@@ -58,9 +70,10 @@ class RequestHandler(BaseHTTPRequestHandler):
     '''
 
     Cases = [case_no_file(),
-             case_existing_file(),
-             case_directory_index_file(),
-             case_always_fail()]
+            case_cgi_file(), #注意这里的顺序，需要先判断是否是需要执行的脚本文件，再判断是否为普通文件
+            case_existing_file(),
+            case_directory_index_file(),
+            case_always_fail()]
 
     # 错误页面模板
     Error_Page = """\
@@ -71,6 +84,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         </body>
         </html>
         """
+
+    def run_cgi(self, full_path):
+        data = subprocess.check_output(["python3", full_path],shell=False)
+        self.send_content(data)
+
 
     def do_GET(self):
         try:
